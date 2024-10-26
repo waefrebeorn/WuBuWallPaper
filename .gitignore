@@ -45,6 +45,6 @@ Thumbs.db
 *.cache
 *.tmp
 venv/
-GifFrames/
+AnimationFrames/
 *.bmp
 setup_log.txt

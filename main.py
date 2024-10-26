@@ -12,11 +12,11 @@ from pathlib import Path
 import logging
 
 class EnhancedWallpaperAnimator:
-    def __init__(self, input_path, target_fps=30):
+    def __init__(self, input_path, target_fps=60):
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.input_path = input_path
         self.output_dir = os.path.join(self.script_dir, "AnimationFrames")
-        self.frame_queue = queue.Queue(maxsize=30)  # Increased buffer for smoother playback
+        self.frame_queue = queue.Queue(maxsize=666)  # Increased buffer for smoother playback
         self.running = False
         self.target_fps = target_fps
         self.frame_delay = 1.0 / target_fps
@@ -213,5 +213,5 @@ class EnhancedWallpaperAnimator:
 
 if __name__ == "__main__":
     input_file = "skeleton.mp4"  # or "skull spinning.gif"
-    animator = EnhancedWallpaperAnimator(input_file, target_fps=10)  # Increased target FPS
+    animator = EnhancedWallpaperAnimator(input_file, target_fps=15)  # Increased target FPS
     animator.run()
