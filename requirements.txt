@@ -1,0 +1,4 @@
+pillow 
+screeninfo 
+opencv-python 
+pywin32 
