@@ -71,7 +71,7 @@ class EnhancedWallpaperAnimator:
         self.logger.info(f"Archive directory set at {self.archive_dir}")
 
         # Initialize in-memory buffers
-        self.buffer_count = 25
+        self.buffer_count = 4
         self.temp_buffers = [BytesIO() for _ in range(self.buffer_count)]
         self.temp_image_paths = [os.path.join(self.ram_disk_path, f"temp_frame_{i}.jpg") for i in range(self.buffer_count)]
         self.current_buffer = 0
@@ -447,8 +447,8 @@ class EnhancedWallpaperAnimator:
 def main():
     # Set up command-line argument parsing
     parser = argparse.ArgumentParser(description="Enhanced Wallpaper Animator")
-    parser.add_argument('input_file', nargs='?', type=str, default="badapple.mp4",
-                        help='Path to the input video or GIF file (e.g., badapple.mp4 or skull_spinning.gif). Defaults to "badapple.mp4" if not provided.')
+    parser.add_argument('input_file', nargs='?', type=str, default="hotelmario.avi",
+                        help='Path to the input video or GIF file (e.g., cellBball.mp4 or skullspinning.gif). Defaults to "badapple.mp4" if not provided.')
     parser.add_argument('--fps', type=int, default=15, help='Target frames per second for wallpaper animation (default: 15)')
     parser.add_argument('--quality', type=int, default=80, help='JPEG quality (0-100, default: 80)')
     parser.add_argument('--scale', type=float, default=0.75, help='Scale factor for resolution (default: 0.75)')
