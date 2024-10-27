@@ -6,4 +6,4 @@ cd $scriptDir
 .\venv\Scripts\Activate
 
 # Run the Python script
-python animate_gif_wallpaper.py
+python main.py

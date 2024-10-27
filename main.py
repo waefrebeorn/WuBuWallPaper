@@ -212,6 +212,6 @@ class EnhancedWallpaperAnimator:
             self.cleanup()
 
 if __name__ == "__main__":
-    input_file = "skeleton.mp4"  # or "skull spinning.gif"
+    input_file = "badapple.mp4"  # or "skull spinning.gif"
     animator = EnhancedWallpaperAnimator(input_file, target_fps=15)  # Increased target FPS
     animator.run()
