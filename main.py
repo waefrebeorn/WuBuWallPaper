@@ -9,7 +9,6 @@ import threading
 import queue
 from pathlib import Path
 import logging
-import tempfile
 from io import BytesIO
 
 class EnhancedWallpaperAnimator:
@@ -26,7 +25,7 @@ class EnhancedWallpaperAnimator:
         self.logger = logging.getLogger(__name__)
 
         # Initialize frame queue
-        self.frame_queue = queue.Queue(maxsize=1000)  # Adjusted maxsize for memory management
+        self.frame_queue = queue.Queue(maxsize=1000)
         self.running = False
 
         # Create the AnimationFrames directory
@@ -42,20 +41,13 @@ class EnhancedWallpaperAnimator:
         os.makedirs(self.frames_dir, exist_ok=True)
         self.logger.info(f"Dedicated frames directory set at {self.frames_dir}")
 
-        # Initialize double-buffering temp files
-        self.temp_frame_paths = [
-            os.path.join(self.frames_dir, "temp_frame1.jpg"),
-            os.path.join(self.frames_dir, "temp_frame2.jpg")
-        ]
-        for temp_path in self.temp_frame_paths:
-            with open(temp_path, 'wb') as f:
-                pass  # Create empty temp files
-            self.logger.info(f"Temporary frame file created at {temp_path}")
+        # Initialize in-memory buffers
+        self.buffer_count = 6  # Using 6 buffers for smoother playback
+        self.temp_buffers = [BytesIO() for _ in range(self.buffer_count)]
+        self.current_buffer = 0
 
-        self.current_temp = 0  # Index to track which temp file to use
-
-        # Lock for switching temp files
-        self.temp_lock = threading.Lock()
+        # Lock for switching buffers
+        self.buffer_lock = threading.Lock()
 
     def get_optimal_monitor_resolution(self):
         """Get the optimal resolution while maintaining aspect ratio"""
@@ -97,7 +89,7 @@ class EnhancedWallpaperAnimator:
         """Load preprocessed frames from the dedicated frames directory into memory"""
         frames_data = []
         frame_files = sorted(Path(self.frames_dir).glob("frame_*.jpg"),
-                            key=lambda x: int(x.stem.split('_')[1]))  # Sort by frame number
+                             key=lambda x: int(x.stem.split('_')[1]))  # Sort by frame number
 
         if not frame_files:
             self.logger.warning(f"No frame files found in {self.frames_dir}")
@@ -107,7 +99,6 @@ class EnhancedWallpaperAnimator:
             try:
                 with open(frame_file, 'rb') as f:
                     frame_bytes = f.read()
-                # Assuming uniform frame_delay; you can modify if durations vary
                 frames_data.append((frame_bytes, self.frame_delay))
             except Exception as e:
                 self.logger.error(f"Failed to load frame {frame_file}: {e}")
@@ -132,11 +123,8 @@ class EnhancedWallpaperAnimator:
                     break
 
                 if frame_count % frame_skip == 0:
-                    # Resize frame
                     frame_resized = cv2.resize(frame, (new_width, new_height),
                                                interpolation=cv2.INTER_LINEAR)
-
-                    # Encode frame to JPEG bytes
                     success, encoded_image = cv2.imencode('.jpg', frame_resized, [cv2.IMWRITE_JPEG_QUALITY, self.quality])
                     if not success:
                         self.logger.error(f"Failed to encode frame {frame_count}")
@@ -146,7 +134,7 @@ class EnhancedWallpaperAnimator:
                     frames_data.append((frame_bytes, self.frame_delay))
 
                     # Save frame as JPEG file for archival
-                    frame_path = os.path.join(self.frames_dir, f"frame_{len(frames_data)-1}.jpg")
+                    frame_path = os.path.join(self.frames_dir, f"frame_{len(frames_data) - 1}.jpg")
                     with open(frame_path, 'wb') as f:
                         f.write(frame_bytes)
 
@@ -170,18 +158,15 @@ class EnhancedWallpaperAnimator:
             while True:
                 try:
                     duration = gif.info.get('duration', 100) / 1000.0  # Convert ms to seconds
-
                     frame = gif.copy()
                     frame = frame.resize((new_width, new_height), Image.LANCZOS)
 
                     if frame.mode != 'RGB':
                         frame = frame.convert('RGB')
 
-                    # Save frame to BytesIO as JPEG
                     byte_io = BytesIO()
                     frame.save(byte_io, format='JPEG', quality=self.quality, optimize=True)
                     frame_bytes = byte_io.getvalue()
-
                     frames_data.append((frame_bytes, duration))
 
                     # Save frame as JPEG file for archival
@@ -213,34 +198,40 @@ class EnhancedWallpaperAnimator:
     def frame_producer(self, frames_data):
         """Load frames into the queue from memory"""
         self.logger.info("Starting frame producer...")
-        for frame_bytes, duration in frames_data:
-            if not self.running:
-                break
-            self.frame_queue.put((frame_bytes, duration))
+        while self.running:
+            for frame_bytes, duration in frames_data:
+                if not self.running:
+                    break
+                self.frame_queue.put((frame_bytes, duration))
         self.logger.info("Frame producer finished.")
 
     def frame_consumer(self):
-        """Consume frames from the queue and set them as wallpaper using double-buffering"""
+        """Consume frames from the queue and set them as wallpaper using in-memory buffers"""
         self.logger.info("Starting frame consumer...")
         while self.running:
             try:
                 frame_bytes, duration = self.frame_queue.get(timeout=1)
 
-                with self.temp_lock:
-                    temp_path = self.temp_frame_paths[self.current_temp]
+                with self.buffer_lock:
+                    buffer = self.temp_buffers[self.current_buffer]
+                    buffer.seek(0)
+                    buffer.truncate()
+                    buffer.write(frame_bytes)
+                    buffer.seek(0)
 
-                    # Write frame bytes to the temporary file
-                    with open(temp_path, 'wb') as f:
-                        f.write(frame_bytes)
+                    # Write buffer to a temporary in-memory file
+                    temp_image_path = os.path.join(self.frames_dir, f"temp_frame_{self.current_buffer}.jpg")
+                    with open(temp_image_path, 'wb') as temp_image:
+                        temp_image.write(buffer.getvalue())
 
                     # Set the wallpaper to the temporary file
                     start_time = time.time()
-                    self.set_wallpaper(temp_path)
+                    self.set_wallpaper(temp_image_path)
                     end_time = time.time()
                     self.logger.info(f"Set wallpaper in {end_time - start_time:.4f} seconds")
 
-                    # Switch to the other temp file for next frame
-                    self.current_temp = 1 - self.current_temp
+                    # Switch to the next buffer
+                    self.current_buffer = (self.current_buffer + 1) % self.buffer_count
 
                 # Sleep for the duration of the frame
                 time.sleep(duration)
@@ -258,9 +249,11 @@ class EnhancedWallpaperAnimator:
         self.logger.info("Cleaning up resources...")
         try:
             # Delete the temporary frame files
-            for temp_path in self.temp_frame_paths:
-                Path(temp_path).unlink(missing_ok=True)
-                self.logger.info(f"Deleted temporary frame file {temp_path}")
+            for i in range(self.buffer_count):
+                temp_path = os.path.join(self.frames_dir, f"temp_frame_{i}.jpg")
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                    self.logger.info(f"Deleted temporary frame file {temp_path}")
         except Exception as e:
             self.logger.error(f"Error deleting temp files: {e}")
 
@@ -304,7 +297,7 @@ class EnhancedWallpaperAnimator:
             self.logger.info(f"Animation started with {len(frames_data)} frames. Press Ctrl+C to stop.")
 
             try:
-                while producer_thread.is_alive() or not self.frame_queue.empty():
+                while True:
                     time.sleep(0.1)
             except KeyboardInterrupt:
                 self.logger.info("\nStopping animation...")
@@ -323,8 +316,8 @@ if __name__ == "__main__":
     input_file = "cellBball.mp4"  # or "skull spinning.gif"
     animator = EnhancedWallpaperAnimator(
         input_file,
-        target_fps=30,          # Adjust based on your needs
-        quality=50,             # Lower = smaller files (range 0-100)
-        scale_factor=0.50       # Lower = smaller resolution
+        target_fps=24,          # Adjust based on your needs
+        quality=80,             # Lower = smaller files (range 0-100)
+        scale_factor=0.75       # Lower = smaller resolution
     )
     animator.run()
