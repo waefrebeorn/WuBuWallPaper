@@ -1,6 +1,1 @@
 Script is not running with elevated privileges. Restarting with elevation...
-Traceback (most recent call last):
-  File "C:\projects\WuBuWallPaper\main.py", line 23, in <module>
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-                                                       ^^^
-NameError: name 'sys' is not defined. Did you forget to import 'sys'?
