@@ -1,7 +1,7 @@
 
 # WuBuWallPaper
 
-
+![WuBuWallPaper Banner](https://github.com/waefrebeorn/WuBuWallPaper/blob/master/skullspinning.gif) 
 
 **WuBuWallPaper** is a dynamic desktop wallpaper animator for Windows that brings your favorite videos and GIFs to life as your desktop background. Leveraging frame skipping and RAM disk technology, WuBuWallPaper ensures smooth and efficient playback, providing a visually stunning and customizable desktop experience.
 
