@@ -1,5 +1,6 @@
 import ctypes
 import os
+import subprocess
 import time
 import cv2
 import numpy as np
@@ -10,44 +11,81 @@ import queue
 from pathlib import Path
 import logging
 from io import BytesIO
+import sys
 
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+if not is_admin():
+    print("Script is not running with elevated privileges. Restarting with elevation...")
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+    sys.exit()
+    
 class EnhancedWallpaperAnimator:
-    def __init__(self, input_path, target_fps=30, quality=80, scale_factor=0.75):
+    def __init__(self, input_path, target_fps=25, quality=80, scale_factor=0.75, ram_disk_size_mb=250):
         self.input_path = input_path
         self.target_fps = target_fps
         self.frame_delay = 1.0 / target_fps
         self.quality = quality  # JPEG quality (0-100)
         self.scale_factor = scale_factor  # Scale factor for resolution
+        self.ram_disk_size_mb = ram_disk_size_mb  # Size of the RAM disk in MB
+        self.ram_disk_path = "R:\\"  # Default path for RAM Disk, change if needed
 
         # Initialize logging
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
+        # Create RAM disk automatically
+        self.create_ram_disk()
+
         # Initialize frame queue
         self.frame_queue = queue.Queue(maxsize=1000)
         self.running = False
 
-        # Create the AnimationFrames directory
-        self.script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.animation_frames_dir = os.path.join(self.script_dir, "AnimationFrames")
-        os.makedirs(self.animation_frames_dir, exist_ok=True)
-        self.logger.info(f"AnimationFrames directory set at {self.animation_frames_dir}")
-
-        # Create a dedicated frames directory based on the input file name
-        self.input_filename = Path(self.input_path).stem  # e.g., "cellBball" from "cellBball.mp4"
-        self.input_extension = Path(self.input_path).suffix  # e.g., ".mp4"
-        self.frames_dir = os.path.join(self.animation_frames_dir, f"{self.input_filename}{self.input_extension}")
+        # Create the AnimationFrames directory on RAM Disk
+        self.frames_dir = os.path.join(self.ram_disk_path, "AnimationFrames")
         os.makedirs(self.frames_dir, exist_ok=True)
-        self.logger.info(f"Dedicated frames directory set at {self.frames_dir}")
+        self.logger.info(f"AnimationFrames directory set at {self.frames_dir}")
 
         # Initialize in-memory buffers
-        self.buffer_count = 6  # Using 6 buffers for smoother playback
+        self.buffer_count = 25  # Using 25 buffers for smoother playback
         self.temp_buffers = [BytesIO() for _ in range(self.buffer_count)]
+        self.temp_image_paths = [os.path.join(self.frames_dir, f"temp_frame_{i}.jpg") for i in range(self.buffer_count)]
         self.current_buffer = 0
 
         # Lock for switching buffers
         self.buffer_lock = threading.Lock()
+
+    def create_ram_disk(self):
+        """Automatically create a RAM disk using ImDisk."""
+        self.logger.info(f"Creating a RAM disk of size {self.ram_disk_size_mb}MB at {self.ram_disk_path}...")
+        try:
+            # ImDisk command to create a RAM disk
+            subprocess.run(
+                ["imdisk", "-a", "-s", f"{self.ram_disk_size_mb}M", "-m", self.ram_disk_path, "-p", "/fs:ntfs /q /y"],
+                check=True
+            )
+            self.logger.info(f"RAM disk created successfully at {self.ram_disk_path}")
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Failed to create RAM disk: {e}")
+            raise
+
+    def remove_ram_disk(self):
+        """Remove the RAM disk when done."""
+        self.logger.info(f"Removing RAM disk at {self.ram_disk_path}...")
+        try:
+            # ImDisk command to remove the RAM disk
+            subprocess.run(
+                ["imdisk", "-D", "-m", self.ram_disk_path],
+                check=True
+            )
+            self.logger.info("RAM disk removed successfully.")
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Failed to remove RAM disk: {e}")
 
     def get_optimal_monitor_resolution(self):
         """Get the optimal resolution while maintaining aspect ratio"""
@@ -148,55 +186,16 @@ class EnhancedWallpaperAnimator:
         self.logger.info(f"Total frames processed: {len(frames_data)}")
         return frames_data
 
-    def process_gif(self):
-        """Process GIF files by loading frames into memory as bytes and saving JPEG sequence"""
-        frames_data = []
-        new_width, new_height = self.get_optimal_monitor_resolution()
-
-        with Image.open(self.input_path) as gif:
-            frame_count = 0
-            while True:
-                try:
-                    duration = gif.info.get('duration', 100) / 1000.0  # Convert ms to seconds
-                    frame = gif.copy()
-                    frame = frame.resize((new_width, new_height), Image.LANCZOS)
-
-                    if frame.mode != 'RGB':
-                        frame = frame.convert('RGB')
-
-                    byte_io = BytesIO()
-                    frame.save(byte_io, format='JPEG', quality=self.quality, optimize=True)
-                    frame_bytes = byte_io.getvalue()
-                    frames_data.append((frame_bytes, duration))
-
-                    # Save frame as JPEG file for archival
-                    frame_path = os.path.join(self.frames_dir, f"frame_{frame_count}.jpg")
-                    with open(frame_path, 'wb') as f:
-                        f.write(frame_bytes)
-
-                    frame_count += 1
-                    if frame_count % 10 == 0:
-                        self.logger.info(f"Processed {frame_count} frames...")
-
-                    gif.seek(gif.tell() + 1)
-
-                except EOFError:
-                    break
-
-        self.logger.info(f"Total frames processed: {len(frames_data)}")
-        return frames_data
-
     def set_wallpaper(self, image_path):
         """Set wallpaper using the provided image path"""
         SPI_SETDESKWALLPAPER = 20
-        # SPIF_SENDWININICHANGE = 2 for potentially faster updates without writing to user profile
         success = ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 2)
         if not success:
             self.logger.error("Failed to set wallpaper.")
         return success
 
     def frame_producer(self, frames_data):
-        """Load frames into the queue from memory"""
+        """Load frames into the queue from memory and loop indefinitely"""
         self.logger.info("Starting frame producer...")
         while self.running:
             for frame_bytes, duration in frames_data:
@@ -219,8 +218,8 @@ class EnhancedWallpaperAnimator:
                     buffer.write(frame_bytes)
                     buffer.seek(0)
 
-                    # Write buffer to a temporary in-memory file
-                    temp_image_path = os.path.join(self.frames_dir, f"temp_frame_{self.current_buffer}.jpg")
+                    # Write buffer to the corresponding temporary file on RAM Disk
+                    temp_image_path = self.temp_image_paths[self.current_buffer]
                     with open(temp_image_path, 'wb') as temp_image:
                         temp_image.write(buffer.getvalue())
 
@@ -249,13 +248,15 @@ class EnhancedWallpaperAnimator:
         self.logger.info("Cleaning up resources...")
         try:
             # Delete the temporary frame files
-            for i in range(self.buffer_count):
-                temp_path = os.path.join(self.frames_dir, f"temp_frame_{i}.jpg")
+            for temp_path in self.temp_image_paths:
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
                     self.logger.info(f"Deleted temporary frame file {temp_path}")
         except Exception as e:
             self.logger.error(f"Error deleting temp files: {e}")
+
+        # Remove the RAM disk when done
+        self.remove_ram_disk()
 
     def run(self):
         """Main method to run the wallpaper animation"""
@@ -316,8 +317,9 @@ if __name__ == "__main__":
     input_file = "cellBball.mp4"  # or "skull spinning.gif"
     animator = EnhancedWallpaperAnimator(
         input_file,
-        target_fps=24,          # Adjust based on your needs
+        target_fps=25,          # Adjusted to 25 FPS based on your requirements
         quality=80,             # Lower = smaller files (range 0-100)
-        scale_factor=0.75       # Lower = smaller resolution
+        scale_factor=0.75,      # Lower = smaller resolution
+        ram_disk_size_mb=250     # Adjust the size of the RAM disk in MB
     )
     animator.run()
