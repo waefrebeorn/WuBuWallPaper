@@ -48,3 +48,4 @@ venv/
 AnimationFrames/
 *.bmp
 setup_log.txt
+output_log.txt
