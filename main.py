@@ -71,7 +71,7 @@ class EnhancedWallpaperAnimator:
         self.logger.info(f"Archive directory set at {self.archive_dir}")
 
         # Initialize in-memory buffers
-        self.buffer_count = 4
+        self.buffer_count = 16
         self.temp_buffers = [BytesIO() for _ in range(self.buffer_count)]
         self.temp_image_paths = [os.path.join(self.ram_disk_path, f"temp_frame_{i}.jpg") for i in range(self.buffer_count)]
         self.current_buffer = 0
