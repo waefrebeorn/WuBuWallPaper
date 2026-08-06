@@ -2,11 +2,29 @@
 
 ## Preamble
 
-The populace is free. The corporation is an entity of money. We scale by definition to allow small businesses, governments, non-profits, and educational entities to use freely and stop being taken advantage of by mega-corporations.
+**The populace is free. The corporation is an entity of money.**
 
-This license is the master license for ALL Waefrebeorn projects across ALL media, repos, and platforms. It is broad, agnostic, and designed to maximize freedom for the general population while ensuring that governments, entities, and large commercial actors integrate responsibly.
+We scale by definition to allow small businesses, governments, non-profits, and
+educational entities to use freely — and to stop being taken advantage of by
+mega-corporations.
 
-We disassociate ourselves from malicious compliance and misuse. We cannot control what every user does with our creations, because we are software creators, not moral policemen. But we retain the right to deny our endorsement, cooperation, and assistance to those who use our work for non-moral and non-allowable activities. That is not a license restriction — it is a dispensation: we choose not to be responsible for what we cannot control.
+This license is **agnostic and omnivorous**. It is the master license for ALL
+Waefrebeorn projects across ALL media, repos, and platforms — **not just code,
+not just models, not just MaaS**. It covers: source code and binaries, model
+weights and fine-tunes, training data and datasets, video and audio, images
+and art, comics and stories, documentation and research, hardware designs and
+firmware, configs and scripts, and any future medium we invent.
+
+It is broad, agnostic, and designed to maximize freedom for the general
+population while ensuring that governments, entities, and large commercial
+actors integrate responsibly.
+
+We disassociate ourselves from malicious compliance and misuse. We cannot control
+what every user does with our creations, because we are software creators, not
+moral policemen. But we retain the right to deny our endorsement, cooperation,
+and assistance to those who use our work for non-moral and non-allowable
+activities. That is not a license restriction — it is a dispensation: we choose
+not to be responsible for what we cannot control.
 
 ---
 
@@ -274,11 +292,28 @@ These provisions exist because: (a) AI models can cause harm that contributors c
 
 ## 12. Dispensation Summary
 
-This license was built to satisfy three core requirements:
+This license was built to satisfy three core requirements — and it is **agnostic**
+across all of them, covering every medium Waefrebeorn produces:
 
-1. **More freedoms for the general population** — addressed in §2 (Five Freedoms) and §3.1–3.3. Governments, non-profits, educational institutions, and small businesses are explicitly covered as Populace entities.
-2. **Allow governments and entities to properly integrate** — addressed in §7 (Government and Public Sector Integration Features). The EU Interoperable Europe Act, European Commission Open Source Strategy, and all public-sector FOSS frameworks are compatible with this license.
-3. **Disassociate from malicious compliance and non-moral users** — addressed in §5 (Anti-Shell-Company), §6 (Prohibited Activities and Non-Association), and §5.4 (Dispensation Clause). The license explicitly disclaims downstream responsibility for uses the Licensor cannot control. Malicious users are not restricted by the license (because the license cannot restrict all bad actors), but they lose the Licensor's endorsement and cooperation.
+1. **More freedoms for the general population** — addressed in §2 (Five Freedoms)
+   and §3.1–3.3. Governments, non-profits, educational institutions, and small
+   businesses are explicitly covered as Populace entities. **Applies to code,
+   models, video, art, firmware, and all media.**
+2. **Allow governments and entities to properly integrate** — addressed in §7
+   (Government and Public Sector Integration Features). The EU Interoperable
+   Europe Act, European Commission Open Source Strategy, and all public-sector
+   FOSS frameworks are compatible. **Governments may use, modify, and deploy
+   Waefrebeorn Work — all forms, all media — without restriction.**
+3. **Disassociate from malicious compliance and non-moral users** — addressed in
+   §5 (Anti-Shell-Company), §6 (Prohibited Activities and Non-Association), and
+   §5.4 (Dispensation Clause). The license explicitly disclaims downstream
+   responsibility for uses the Licensor cannot control. **The non-association
+   clause applies to all Waefrebeorn output — we do not endorse misuse of our
+   code, models, videos, art, or any other creation, in any medium.**
+
+This is NOT a "model-as-a-service" license. MaaS (§4 Obligation B) is merely one
+of four corporate obligations. The license itself is a **universal umbrella**
+for all Waefrebeorn creative and technical output.
 
 ---
 
